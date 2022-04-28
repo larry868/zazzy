@@ -24,8 +24,10 @@ import (
 
 const (
 	ZSDIR  = ".zazzy"
-	PUBDIR = ".pub"
+	DFTPUBDIR = ".pub"
 )
+
+var PUBDIR string = DFTPUBDIR
 
 type Vars map[string]string
 
@@ -53,6 +55,12 @@ func globals() Vars {
 			vars[strings.ToLower(pair[0][3:])] = pair[1]
 		}
 	}
+
+	// special environment variable
+	if len(vars["pubdir"]) != 0 {
+		PUBDIR = vars["pubdir"]
+	}
+
 	return vars
 }
 
@@ -80,6 +88,12 @@ func loadIgnore() (lst []string) {
 			}
 		}
     }
+
+	// ensure PUBDIR is always ignored
+	if filepath.Base(PUBDIR)[0] != '.' && !strings.HasPrefix(PUBDIR, ".") {
+		pubdir := strings.TrimRight(PUBDIR, "/") + "**"
+		lst = append(lst, pubdir)
+	}
 	return lst
 }
 
