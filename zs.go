@@ -86,7 +86,7 @@ func run(vars Vars, cmd string, args ...string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(outbuf.Bytes()), nil
+	return outbuf.String(), nil
 }
 
 // getVars returns list of variables defined in a text file and actual file
@@ -140,9 +140,10 @@ func getVars(path string, globals Vars) (Vars, string, error) {
 				v[key] = value
 			}
 		}
-		if strings.HasPrefix(v["url"], "./") {
-			v["url"] = v["url"][2:]
-		}
+		v["url"] = strings.TrimLeft(v["url"], "./")
+		//if strings.HasPrefix(v["url"], "./") {
+		//	v["url"] = v["url"][2:]
+		//}
 		return v, body, nil
 	}
 }
@@ -159,7 +160,7 @@ func render(s string, vars Vars) (string, error) {
 			return out.String(), nil
 		} else {
 			if to := strings.Index(s, delim_close); to == -1 {
-				return "", fmt.Errorf("Close delim not found")
+				return "", fmt.Errorf("close delim not found")
 			} else {
 				out.WriteString(s[:from])
 				cmd := s[from+len(delim_open) : to]
@@ -179,7 +180,6 @@ func render(s string, vars Vars) (string, error) {
 			}
 		}
 	}
-	return s, nil
 }
 
 // Renders markdown with the given layout into html expanding all the macros
@@ -264,7 +264,7 @@ func buildAmber(path string, w io.Writer, vars Vars) error {
 		return err
 	}
 
-	if body, err = render(string(htmlBuf.Bytes()), v); err != nil {
+	if body, err = render(htmlBuf.String(), v); err != nil {
 		return err
 	}
 
