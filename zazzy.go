@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	ZSDIR  = ".zs"
+	ZSDIR  = ".zazzy"
 	PUBDIR = ".pub"
 )
 
