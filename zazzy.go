@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/eknkc/amber"
+	"github.com/gobwas/glob"
 	"github.com/yosssi/gcss"
 	"gopkg.in/russross/blackfriday.v2"
 	"gopkg.in/yaml.v2"
@@ -52,6 +54,33 @@ func globals() Vars {
 		}
 	}
 	return vars
+}
+
+// load .zazzy/.ignore file with list of files and directories to be ignored during the process
+// each entry must be formatted as a glob pattern https://github.com/gobwas/glob
+// return an array of trimed pattern of files to ignore
+func loadIgnore() (lst []string) {
+    f, err := os.Open(filepath.Join(ZSDIR, ".ignore"))
+    if err != nil {
+		// .ignore file is not mandatory
+        return nil
+    }
+    defer f.Close()
+
+    // read the file line by line using scanner
+    scanner := bufio.NewScanner(f)
+
+    for scanner.Scan() {
+		entry := strings.Trim(scanner.Text(), " ")
+		if len(entry)>0 && entry[:1] != "#" {
+			if _, err := glob.Compile(entry); err != nil {
+				log.Println(err)
+			} else {
+				lst = append(lst, entry)
+			}
+		}
+    }
+	return lst
 }
 
 // run executes a command or a script. Vars define the command environment,
@@ -345,6 +374,8 @@ func buildAll(watch bool) {
 	modified := false
 
 	vars := globals()
+	ignorelist := loadIgnore()
+
 	for {
 		os.Mkdir(PUBDIR, 0755)
 		filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
@@ -352,6 +383,15 @@ func buildAll(watch bool) {
 			if filepath.Base(path)[0] == '.' || strings.HasPrefix(path, ".") {
 				return nil
 			}
+			
+			// ignore files and directory listed in the .zazzy/.ignore file
+			for _, ignoreentry := range ignorelist {
+				g, _ := glob.Compile(ignoreentry)
+				if g.Match(path) {
+					return nil
+				}
+			}
+
 			// inform user about fs walk errors, but continue iteration
 			if err != nil {
 				fmt.Println("error:", err)
@@ -386,7 +426,7 @@ func buildAll(watch bool) {
 }
 
 func init() {
-	// prepend .zs to $PATH, so plugins will be found before OS commands
+	// prepend .zazzy to $PATH, so plugins will be found before OS commands
 	p := os.Getenv("PATH")
 	p = ZSDIR + ":" + p
 	os.Setenv("PATH", p)

@@ -9,4 +9,7 @@ require (
 	gopkg.in/yaml.v2 v2.2.2
 )
 
-require github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
+require (
+	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
+)
