@@ -55,7 +55,7 @@ foo: bar
 title: Hello, world!
 ---
 Some content in markdown
-`: Vars{
+`: {
 			"foo":       "bar",
 			"title":     "Hello, world!",
 			"url":       "test.html",
@@ -67,7 +67,7 @@ Some content in markdown
 url: "example.com/foo.html"
 ---
 Hello
-`: Vars{
+`: {
 			"url":       "example.com/foo.html",
 			"__content": "Hello\n",
 		},
