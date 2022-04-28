@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -200,6 +201,16 @@ func buildMarkdown(path string, w io.Writer, vars Vars) error {
 		defer out.Close()
 		w = out
 	}
+	// process layout only if it exists
+	layoutfile := filepath.Join(ZSDIR, v["layout"])
+	_, errlayout := os.Stat(layoutfile)
+	if errors.Is(errlayout, os.ErrNotExist) {
+		_, err = io.WriteString(w, v["content"])
+		return err
+	} else if errlayout != nil {
+		return errlayout
+	}
+
 	if strings.HasSuffix(v["layout"], ".amber") {
 		return buildAmber(filepath.Join(ZSDIR, v["layout"]), w, v)
 	} else {
@@ -311,17 +322,22 @@ func buildRaw(path string, w io.Writer) error {
 
 func build(path string, w io.Writer, vars Vars) error {
 	ext := filepath.Ext(path)
+	var err error
 	if ext == ".md" || ext == ".mkd" {
-		return buildMarkdown(path, w, vars)
+		err = buildMarkdown(path, w, vars)
 	} else if ext == ".html" || ext == ".xml" {
-		return buildHTML(path, w, vars)
+		err = buildHTML(path, w, vars)
 	} else if ext == ".amber" {
-		return buildAmber(path, w, vars)
+		err = buildAmber(path, w, vars)
 	} else if ext == ".gcss" {
-		return buildGCSS(path, w)
+		err = buildGCSS(path, w)
 	} else {
-		return buildRaw(path, w)
+		err = buildRaw(path, w)
 	}
+	if err != nil {
+		log.Println(err)
+	}
+	return err
 }
 
 func buildAll(watch bool) {
