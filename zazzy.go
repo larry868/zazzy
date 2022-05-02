@@ -110,6 +110,7 @@ func run(vars Vars, cmd string, args ...string) (string, error) {
 		return string(b), nil
 	}
 
+	// external commande (plugin)
 	var errbuf, outbuf bytes.Buffer
 	c := exec.Command(cmd, args...)
 	env := []string{"ZS=" + os.Args[0], "ZS_OUTDIR=" + PUBDIR}
@@ -131,6 +132,81 @@ func run(vars Vars, cmd string, args ...string) (string, error) {
 	}
 	return outbuf.String(), nil
 }
+
+func runListfiles(vars Vars, args ...string) (string, error){
+	// get the pattern of files to scan and list
+	listfilespattern := "."
+	if len(args) == 1 {
+		listfilespattern = args[0]
+	}
+
+	// check the pattern and get lisy of corresponding files
+	matchingfiles, err := filepath.Glob(listfilespattern)
+	if err != nil {
+		return "", errors.New("bad pattern")
+	}
+	if len(matchingfiles) == 0 {
+		fmt.Println("listfiles: no files corresponds to this pattern", err)
+		return "", errors.New("bad pattern")
+	}
+	// get list of files to ignore
+	ignorelist := loadIgnore()
+
+	// get the layout for items
+	if _, ok := vars["itemlayout"]; !ok {
+		vars["itemlayout"] = filepath.Join(ZSDIR, "itemlayout.html")
+	}
+	_, itemlayout, err := getVars(vars["itemlayout"], vars)
+	if err != nil {
+		fmt.Println("unable to proceed item layout file:", err)
+	}
+
+	// scan all existing files, and process as a list item
+	result := ""
+	for _, path := range matchingfiles {
+		// ignore hidden files and directories
+		if filepath.Base(path)[0] == '.' || strings.HasPrefix(path, ".") {
+			continue
+		}
+		
+		// ignore files and directory listed in the .zazzy/.ignore file
+		for _, ignoreentry := range ignorelist {
+			g, _ := glob.Compile(ignoreentry)
+			if g.Match(path) {
+				continue
+			}
+		}
+
+		// inform user about fs walk errors, but continue iteration
+		info, err := os.Stat(path)
+		if err != nil {
+			fmt.Println("item error:", err)
+			continue
+		}
+
+		if info.IsDir() {
+			continue
+		} else {
+			log.Println("item:", path)
+			// load file's vars
+			vitem, _, err := getVars(path, vars)
+			if err != nil {
+				fmt.Println("item error:", err)
+				return "", err
+			}
+			vitem["file"] = path
+			vitem["url"] = path[:len(path)-len(filepath.Ext(path))] + ".html"
+			vitem["output"] = filepath.Join(PUBDIR, vitem["url"])
+			item, err := render(itemlayout, vitem)
+			if err != nil {
+				return "", err
+			}
+			result += item
+		}
+	}
+	return result, nil
+}
+
 
 // getVars returns list of variables defined in a text file and actual file
 // content following the variables declaration. Header is separated from
@@ -191,7 +267,7 @@ func getVars(path string, globals Vars) (Vars, string, error) {
 	}
 }
 
-// Render expanding zs plugins and variables
+// Render expanding zs plugins and variables, and process special command
 func render(s string, vars Vars) (string, error) {
 	delim_open := "{{"
 	delim_close := "}}"
@@ -210,11 +286,23 @@ func render(s string, vars Vars) (string, error) {
 				s = s[to+len(delim_close):]
 				m := strings.Fields(cmd)
 				if len(m) == 1 {
+					// variable
 					if v, ok := vars[m[0]]; ok {
 						out.WriteString(v)
 						continue
 					}
 				}
+				// proceed with special commands
+				if m[0] == "listfiles" {
+					if res, err := runListfiles(vars, m[1:]...); err == nil {
+						out.WriteString(res)
+					} else {
+						fmt.Println(err)
+					}
+					continue
+				}
+
+				// sz pluggins OR partial in hmtl/amber format, OR special command
 				if res, err := run(vars, m[0], m[1:]...); err == nil {
 					out.WriteString(res)
 				} else {

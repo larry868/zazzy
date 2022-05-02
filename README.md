@@ -163,7 +163,15 @@ it's an empty string).
 
 Starting from `zs` version +
 
+### tag V0.2.0
+
+- placeholder `{{ listfiles {pattern} }}` run special command to parse itemlayout html for every file in the list correspondinf to the pattern. Usefull to generate a list of blog entries.
+  Default layout for items is `itemlayout.html` but can be specified in YAML environment variable of the page where the placeholder is found.
+
+
+
 ### tag V0.1.0
+
 - upgraded to go 1.16
 - enhancement to allow processing of markdonw and amber file without layout file
 - ``.zs/.ignore `` file allows to list files and directories to be igniorred from the processor
