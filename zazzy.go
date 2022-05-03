@@ -19,8 +19,8 @@ import (
 	"github.com/eknkc/amber"
 	"github.com/gobwas/glob"
 	"github.com/yosssi/gcss"
-	"gopkg.in/russross/blackfriday.v2"
-	"gopkg.in/yaml.v2"
+	"github.com/russross/blackfriday/v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
