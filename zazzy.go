@@ -134,23 +134,23 @@ func run(vars Vars, cmd string, args ...string) (string, error) {
 	return outbuf.String(), nil
 }
 
-// renderListfiles generate an HTML string for every files in the pattern 
+// renderlist generate an HTML string for every files in the pattern 
 // passed in arg[0]. The string if rendered according to the itemlayout.html file.
 // Than all strings are concatenated and ordered accordng to filenames in the pattern
-func renderListfiles(vars Vars, args ...string) (string, error){
+func renderlist(vars Vars, args ...string) (string, error){
 	// get the pattern of files to scan and list
-	listfilespattern := "."
+	filelistpattern := "."
 	if len(args) == 1 {
-		listfilespattern = args[0]
+		filelistpattern = args[0]
 	}
 
 	// check the pattern and get lisy of corresponding files
-	matchingfiles, err := filepath.Glob(listfilespattern)
+	matchingfiles, err := filepath.Glob(filelistpattern)
 	if err != nil {
 		return "", errors.New("bad pattern")
 	}
 	if len(matchingfiles) == 0 {
-		fmt.Println("listfiles: no files corresponds to this pattern", err)
+		fmt.Println("renderlist: no files corresponds to this pattern. The list is empty.", err)
 		return "", errors.New("bad pattern")
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(matchingfiles)))
@@ -182,21 +182,21 @@ func renderListfiles(vars Vars, args ...string) (string, error){
 			}
 		}
 
-		// inform user about fs walk errors, but continue iteration
+		// inform user about fs errors, but continue iteration
 		info, err := os.Stat(path)
 		if err != nil {
-			fmt.Println("item error:", err)
+			fmt.Println("renderlist item error:", err)
 			continue
 		}
 
 		if info.IsDir() {
 			continue
 		} else {
-			log.Println("item:", path)
+			log.Println("renderlist item:", path)
 			// load file's vars
 			vitem, _, err := getVars(path, vars)
 			if err != nil {
-				fmt.Println("item error:", err)
+				fmt.Println("renderlist item error:", err)
 				return "", err
 			}
 			vitem["file"] = path
@@ -298,8 +298,8 @@ func render(s string, vars Vars) (string, error) {
 					}
 				}
 				// proceed with special commands
-				if m[0] == "listfiles" {
-					if res, err := renderListfiles(vars, m[1:]...); err == nil {
+				if m[0] == "renderlist" {
+					if res, err := renderlist(vars, m[1:]...); err == nil {
 						out.WriteString(res)
 					} else {
 						fmt.Println(err)
