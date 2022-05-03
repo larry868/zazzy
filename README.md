@@ -203,8 +203,14 @@ Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https:/
 - enhancement to allow processing of markdonw and amber file without layout file
 - ``.zazzy/.ignore `` file allows to list files and directories to be igniorred from the processor
 
+### Zazzy go module
+
+Zazzy is published and available in the go public package manager https://pkg.go.dev/github.com/lolorenzo777/zazzy
+
+`GOPROXY=proxy.golang.org go list -m github.com/lolorenzo777/zazzy@vx.y.z`
+
 ## License
 
-The software is distributed under the MIT license.
+The software is distributed under the [MIT license](LICENSE).
 
 [YAML]: https://github.com/go-yaml/yaml
