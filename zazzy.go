@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -133,7 +134,10 @@ func run(vars Vars, cmd string, args ...string) (string, error) {
 	return outbuf.String(), nil
 }
 
-func runListfiles(vars Vars, args ...string) (string, error){
+// renderListfiles generate an HTML string for every files in the pattern 
+// passed in arg[0]. The string if rendered according to the itemlayout.html file.
+// Than all strings are concatenated and ordered accordng to filenames in the pattern
+func renderListfiles(vars Vars, args ...string) (string, error){
 	// get the pattern of files to scan and list
 	listfilespattern := "."
 	if len(args) == 1 {
@@ -149,6 +153,7 @@ func runListfiles(vars Vars, args ...string) (string, error){
 		fmt.Println("listfiles: no files corresponds to this pattern", err)
 		return "", errors.New("bad pattern")
 	}
+	sort.Sort(sort.Reverse(sort.StringSlice(matchingfiles)))
 	// get list of files to ignore
 	ignorelist := loadIgnore()
 
@@ -294,7 +299,7 @@ func render(s string, vars Vars) (string, error) {
 				}
 				// proceed with special commands
 				if m[0] == "listfiles" {
-					if res, err := runListfiles(vars, m[1:]...); err == nil {
+					if res, err := renderListfiles(vars, m[1:]...); err == nil {
 						out.WriteString(res)
 					} else {
 						fmt.Println(err)
