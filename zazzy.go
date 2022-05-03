@@ -16,9 +16,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/eknkc/amber"
 	"github.com/gobwas/glob"
-	"github.com/yosssi/gcss"
 	"github.com/russross/blackfriday/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -103,10 +101,7 @@ func loadIgnore() (lst []string) {
 // prepended.  Additional variable $ZS contains path to the zs binary. Command
 // stderr is printed to zs stderr, command output is returned as a string.
 func run(vars Vars, cmd string, args ...string) (string, error) {
-	// First check if partial exists (.amber or .html)
-	if b, err := ioutil.ReadFile(filepath.Join(ZSDIR, cmd+".amber")); err == nil {
-		return string(b), nil
-	}
+	// First check if partial exists (.html)
 	if b, err := ioutil.ReadFile(filepath.Join(ZSDIR, cmd+".html")); err == nil {
 		return string(b), nil
 	}
@@ -240,11 +235,7 @@ func getVars(path string, globals Vars) (Vars, string, error) {
 
 	// Add layout if none is specified
 	if _, ok := v["layout"]; !ok {
-		if _, err := os.Stat(filepath.Join(ZSDIR, "layout.amber")); err == nil {
-			v["layout"] = "layout.amber"
-		} else {
-			v["layout"] = "layout.html"
-		}
+		v["layout"] = "layout.html"
 	}
 
 	delim := "\n---\n"
@@ -307,7 +298,7 @@ func render(s string, vars Vars) (string, error) {
 					continue
 				}
 
-				// sz pluggins OR partial in hmtl/amber format, OR special command
+				// sz pluggins OR partial in hmtl format
 				if res, err := run(vars, m[0], m[1:]...); err == nil {
 					out.WriteString(res)
 				} else {
@@ -347,11 +338,7 @@ func buildMarkdown(path string, w io.Writer, vars Vars) error {
 		return errlayout
 	}
 
-	if strings.HasSuffix(v["layout"], ".amber") {
-		return buildAmber(filepath.Join(ZSDIR, v["layout"]), w, v)
-	} else {
-		return buildHTML(filepath.Join(ZSDIR, v["layout"]), w, v)
-	}
+	return buildHTML(filepath.Join(ZSDIR, v["layout"]), w, v)
 }
 
 // Renders text file expanding all variable macros inside it
@@ -376,65 +363,6 @@ func buildHTML(path string, w io.Writer, vars Vars) error {
 		w = f
 	}
 	return tmpl.Execute(w, vars)
-}
-
-// Renders .amber file into .html
-func buildAmber(path string, w io.Writer, vars Vars) error {
-	v, body, err := getVars(path, vars)
-	if err != nil {
-		return err
-	}
-	a := amber.New()
-	if err := a.Parse(body); err != nil {
-		fmt.Println(body)
-		return err
-	}
-
-	t, err := a.Compile()
-	if err != nil {
-		return err
-	}
-
-	htmlBuf := &bytes.Buffer{}
-	if err := t.Execute(htmlBuf, v); err != nil {
-		return err
-	}
-
-	if body, err = render(htmlBuf.String(), v); err != nil {
-		return err
-	}
-
-	if w == nil {
-		f, err := os.Create(filepath.Join(PUBDIR, renameExt(path, ".amber", ".html")))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		w = f
-	}
-	_, err = io.WriteString(w, body)
-	return err
-}
-
-// Compiles .gcss into .css
-func buildGCSS(path string, w io.Writer) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if w == nil {
-		s := strings.TrimSuffix(path, ".gcss") + ".css"
-		css, err := os.Create(filepath.Join(PUBDIR, s))
-		if err != nil {
-			return err
-		}
-		defer css.Close()
-		w = css
-	}
-	_, err = gcss.Compile(w, f)
-	return err
 }
 
 // Copies file as is from path to writer
@@ -463,10 +391,6 @@ func build(path string, w io.Writer, vars Vars) error {
 		err = buildMarkdown(path, w, vars)
 	} else if ext == ".html" || ext == ".xml" {
 		err = buildHTML(path, w, vars)
-	} else if ext == ".amber" {
-		err = buildAmber(path, w, vars)
-	} else if ext == ".gcss" {
-		err = buildGCSS(path, w)
 	} else {
 		err = buildRaw(path, w)
 	}

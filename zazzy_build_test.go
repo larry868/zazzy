@@ -26,7 +26,7 @@ func testBuild(path string, t *testing.T) {
 	wd, _ := os.Getwd()
 	os.Chdir(path)
 	args := os.Args[:]
-	os.Args = []string{"zs", "build"}
+	os.Args = []string{"zazzy", "build"}
 	t.Log("--- BUILD", path)
 	main()
 

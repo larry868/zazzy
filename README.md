@@ -20,7 +20,7 @@
 * Working with partials (aka. embedded html)
 * pre and post build external command call
 * `watch` feature for live generation during dev.
-* `GCSS` preprocessor integrated, but can run with ``LESS`` or any other
+* Can run with ``LESS`` or any other CSS prprocessor
 
 ## Installation
 
@@ -41,7 +41,7 @@ export ZS_PUBDIR=docs && zazzy build
 
 ## Ideology
 
-Keep your texts in markdown, [amber][amber] or HTML format right in the main directory
+Keep your texts in markdown or HTML format right in the main directory
 of your blog/site.
 
 Keep all service files (extensions, layout pages, deployment scripts etc)
@@ -73,10 +73,10 @@ Every variable from the content header will be passed via environment variables 
 
 ## Default variables in file's header
 
-- `layout:` defines the `.html` or `.amber` file to be used as the layout. By default, the `.zazzy/layout.html` or `.zazzy/layout.amber` will be used. If none of these files are founded, the file is processed without any layout.
+- `layout:` defines the `.html` file to be used as the layout. By default, the `.zazzy/layout.html` will be used. If none of these files are founded, the file is processed without any layout.
 - `title:` define the title of the page. By default this is the name of the file
 - `description` define the description of the page. Nothing by default.
-- `url` define the URL for the generated page. By default this is the markdown or amber filename with the ``.html`` extension.
+- `url` define the URL for the generated page. By default this is the markdown filename with the ``.html`` extension.
 
 ## Ignored files
 
@@ -109,7 +109,7 @@ $SZ_PUBDIR=docs zazzy build
 
 ## Working with partials (aka. embedded html)
 
-Create your partial file into the `.zazzy` directory. Partials must be either `.html` or `.amber` files.
+Create your partial file into the `.zazzy` directory. Partials must be `.html` files.
 
 Then insert it's placeholder whenever you want into your other files (could be the layout too). 
 
@@ -169,12 +169,6 @@ content generation, or additional commands, like LESS to CSS conversion:
 	lessc < $ZS_OUTDIR/styles.less > $ZS_OUTDIR/styles.css
 	rm -f $ZS_OUTDIR/styles.css
 
-## Syntax sugar
-
-By default, `zazzy` converts each `.amber` file into `.html`, so you can use lightweight Jade-like syntax instead of bloated HTML.
-
-Also, `zazzy` converts `.gcss` into `.css`, so you don't really need LESS or SASS. More about GCSS can be found [here][gcss].
-
 ## Command line usage
 
 `zazzy build` re-builds your site.
@@ -197,21 +191,20 @@ Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https:/
 - [ ] Feature/pluggin to get and embedd favicon/image of URL
 - [ ] Feature/pluggin to get and embedd favicon/cards of URL
 - [ ] Allow partials within layouts
+- [x] remove amber and gcss features
 
-### tag V0.2.0
+### V0.2
 
 - placeholder `{{ renderlist {pattern} }}`
 
-### tag V0.1.0
+### V0.1
 
 - upgraded to go 1.16
 - enhancement to allow processing of markdonw and amber file without layout file
-- ``.zs/.ignore `` file allows to list files and directories to be igniorred from the processor
+- ``.zazzy/.ignore `` file allows to list files and directories to be igniorred from the processor
 
 ## License
 
 The software is distributed under the MIT license.
 
-[amber]: https://github.com/eknkc/amber/
 [YAML]: https://github.com/go-yaml/yaml
-[gcss]: https://github.com/yosssi/gcss

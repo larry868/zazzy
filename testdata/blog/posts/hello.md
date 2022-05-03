@@ -1,8 +1,8 @@
-title: First post
+title: Hello First post
 date: 28-08-2015
 ---
 
 # {{title}}
 
-This is my first post
+This is my Hello post
 

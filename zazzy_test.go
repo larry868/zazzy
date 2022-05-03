@@ -8,16 +8,16 @@ import (
 )
 
 func TestRenameExt(t *testing.T) {
-	if s := renameExt("foo.amber", ".amber", ".html"); s != "foo.html" {
+	if s := renameExt("foo.md", ".md", ".html"); s != "foo.html" {
 		t.Error(s)
 	}
-	if s := renameExt("foo.amber", "", ".html"); s != "foo.html" {
+	if s := renameExt("foo.md", "", ".html"); s != "foo.html" {
 		t.Error(s)
 	}
-	if s := renameExt("foo.amber", ".md", ".html"); s != "foo.amber" {
+	if s := renameExt("foo.txt", ".md", ".html"); s != "foo.txt" {
 		t.Error(s)
 	}
-	if s := renameExt("foo", ".amber", ".html"); s != "foo" {
+	if s := renameExt("foo", ".md", ".html"); s != "foo" {
 		t.Error(s)
 	}
 	if s := renameExt("foo", "", ".html"); s != "foo.html" {
