@@ -96,6 +96,50 @@ func loadIgnore() (lst []string) {
 	return lst
 }
 
+var gSitemapWarning bool
+
+// appendSitemap generate an entry in the sitemap.txt file
+// according to paramaters: ZS_SITEMAPTXT must be true, and 
+// the "sitemap: true" is in the YAML file header
+func appendSitemap(path string, vars Vars) {
+	if strings.ToLower(vars["sitemaptype"]) != "txt" {
+		return 
+	}
+
+	if strings.ToLower(vars["sitemap"]) != "true" {
+		return 
+	}
+
+	if len(vars["hosturl"]) == 0 && !gSitemapWarning {
+		gSitemapWarning = true
+		fmt.Println("Warning: generating sitemap without hosturl.")
+	}
+
+	sitemapentry := filepath.Join(vars["hosturl"], vars["url"])
+
+    file, err := os.OpenFile(filepath.Join(PUBDIR, "sitemap.txt"), os.O_RDWR|os.O_CREATE, 0755)
+    if err != nil {
+		log.Println(err)
+		return
+    }
+    defer file.Close()
+	scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+		// do not add twice the same URL
+		if strings.ToLower(strings.Trim(scanner.Text(), " ")) == sitemapentry {
+			return 
+		}
+    }
+    if err := scanner.Err(); err != nil {
+		log.Println(err)
+		return
+    }
+	if _, err := file.WriteString( sitemapentry +"\n"); err != nil {
+		log.Println(err)
+		return
+	}
+}
+
 // run executes a command or a script. Vars define the command environment,
 // each zs var is converted into OS environemnt variable with ZS_ prefix
 // prepended.  Additional variable $ZS contains path to the zs binary. Command
@@ -328,6 +372,9 @@ func buildMarkdown(path string, w io.Writer, vars Vars) error {
 		defer out.Close()
 		w = out
 	}
+	// TODO: append sitemap
+	appendSitemap(path, v)
+
 	// process layout only if it exists
 	layoutfile := filepath.Join(ZSDIR, v["layout"])
 	_, errlayout := os.Stat(layoutfile)
@@ -362,6 +409,9 @@ func buildHTML(path string, w io.Writer, vars Vars) error {
 		defer f.Close()
 		w = f
 	}
+	// TODO: append sitemap
+	appendSitemap(path, v)
+
 	return tmpl.Execute(w, vars)
 }
 
@@ -406,6 +456,8 @@ func buildAll(watch bool) {
 
 	vars := globals()
 	ignorelist := loadIgnore()
+	// TODO: clear sitemap if any
+	os.Remove(filepath.Join(PUBDIR, "sitemap.txt"))
 
 	for {
 		os.Mkdir(PUBDIR, 0755)

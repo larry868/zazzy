@@ -1,5 +1,7 @@
 # zazzy
 
+Zazzy is a simple Static Site Generator, written in Go.
+
 ``zazzy`` is an extended version of the `sz` extremely minimal static site generator written in Go. `sz` itself was inspired by `zas` generator.
 
 ## Values
@@ -21,6 +23,7 @@
 * pre and post build external command call
 * `watch` feature for live generation during dev.
 * Can run with ``LESS`` or any other CSS prprocessor
+* sitemap generation
 
 ## Installation
 
@@ -133,6 +136,10 @@ placeholder `{{ renderlist {pattern} }}` run special command to parse itemlayout
 
 Default layout for items is `itemlayout.html` but can be specified in YAML environment variable of the page where the placeholder is found.
 
+## sitemap
+
+To generate a sitemap then declare `ZS_SITEMAPTYPE=txt` in your environmetnt variable, then add the YAML entry `sitemap: true` in every `markdown` and `html` files you want to seein the sitemap.
+
 ## Example of RSS generation
 
 Extensions can be written in any language you know (Bash, Python, Lua, JavaScript, Go, even Assembler). Here's an example of how to scan all markdown blog posts and create RSS items:
@@ -187,7 +194,7 @@ Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https:/
 
 ### TODO
 
-- [ ] Feature to generate a sitemap
+- [x] Feature to generate a sitemap
 - [ ] Feature/pluggin to get and embedd favicon/image of URL
 - [ ] Feature/pluggin to get and embedd favicon/cards of URL
 - [ ] Allow partials within layouts
