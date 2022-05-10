@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gobwas/glob"
+	"github.com/lolorenzo777/loadfavicon/getfavicon"
 	"github.com/russross/blackfriday/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -58,6 +59,9 @@ func globals() Vars {
 	// special environment variable
 	if len(vars["pubdir"]) != 0 {
 		PUBDIR = vars["pubdir"]
+	}
+	if len(vars["favicondir"]) == 0 {
+		vars["favicondir"] = "/img/favicons"
 	}
 
 	return vars
@@ -145,11 +149,6 @@ func appendSitemap(path string, vars Vars) {
 // prepended.  Additional variable $ZS contains path to the zs binary. Command
 // stderr is printed to zs stderr, command output is returned as a string.
 func run(vars Vars, cmd string, args ...string) (string, error) {
-	// First check if partial exists (.html)
-	if b, err := ioutil.ReadFile(filepath.Join(ZSDIR, cmd+".html")); err == nil {
-		return string(b), nil
-	}
-
 	// external commande (plugin)
 	var errbuf, outbuf bytes.Buffer
 	c := exec.Command(cmd, args...)
@@ -173,15 +172,60 @@ func run(vars Vars, cmd string, args ...string) (string, error) {
 	return outbuf.String(), nil
 }
 
+// getDownloadedFavicon get favicon URL of the downloaded Favicon, and download it 
+// if it doesn't exist on the local directory.
+func getDownloadedFavicon(website string) (url string, err error) {
+
+	vars := globals()
+	faviconCachePath := filepath.Join(PUBDIR, vars["favicondir"])
+	faviconSlugifiedWebsite := getfavicon.SlugHost(website)
+
+	// look if favicon(s) has already been downloaded
+	cache, err := filepath.Glob(filepath.Join(faviconCachePath, faviconSlugifiedWebsite) + "+*.*")
+	if len(cache) == 0 && err == nil{
+		// Connect to the website and download the best favicon
+		favicons, err := getfavicon.Download(website, faviconCachePath, true)
+		if len(favicons) == 0 {
+			log.Println(err)
+			return "", err
+		}
+		url = filepath.Join("/", vars["favicondir"], favicons[0].DiskFileName)
+	} else {
+		url = cache[0]
+		if url[:len(PUBDIR)] != PUBDIR {
+			panic("getDownloadedFavicon")
+		}
+		url = url[len(PUBDIR):]
+	}
+
+	return url, err
+}
+
+// renderFavicon donwload th favicon of a website given in paramaters 
+// and generate html to render thefavicon image. 
+func renderFavicon(vars Vars, args ...string) (string, error){
+	if len(args) != 1 {
+		log.Println("favicon placeholder requires a website in parameter. nothing rendered")
+		return "", nil
+	}
+
+	faviconURL, err := getDownloadedFavicon(args[0])
+	if len(faviconURL) > 0 && err == nil {
+		return "<img src=\"" + faviconURL +"\" alt=\"icon\" class=\"favicon\" role=\"img\">", nil
+	}
+	return "", err
+}
+
 // renderlist generate an HTML string for every files in the pattern 
 // passed in arg[0]. The string if rendered according to the itemlayout.html file.
 // Than all strings are concatenated and ordered accordng to filenames in the pattern
 func renderlist(vars Vars, args ...string) (string, error){
 	// get the pattern of files to scan and list
-	filelistpattern := "."
-	if len(args) == 1 {
-		filelistpattern = args[0]
+	if len(args) != 1 {
+		log.Println("renderlist placeholder requires pattern in parameter. nothing rendered.")
+		return "", nil
 	}
+	filelistpattern := args[0]
 
 	// check the pattern and get lisy of corresponding files
 	matchingfiles, err := filepath.Glob(filelistpattern)
@@ -241,7 +285,7 @@ func renderlist(vars Vars, args ...string) (string, error){
 			vitem["file"] = path
 			vitem["url"] = path[:len(path)-len(filepath.Ext(path))] + ".html"
 			vitem["output"] = filepath.Join(PUBDIR, vitem["url"])
-			item, err := render(itemlayout, vitem)
+			item, err := render(itemlayout, vitem, 1)
 			if err != nil {
 				return "", err
 			}
@@ -308,7 +352,7 @@ func getVars(path string, globals Vars) (Vars, string, error) {
 }
 
 // Render expanding zs plugins and variables, and process special command
-func render(s string, vars Vars) (string, error) {
+func render(s string, vars Vars, deep int) (string, error) {
 	delim_open := "{{"
 	delim_close := "}}"
 
@@ -325,24 +369,46 @@ func render(s string, vars Vars) (string, error) {
 				cmd := s[from+len(delim_open) : to]
 				s = s[to+len(delim_close):]
 				m := strings.Fields(cmd)
-				if len(m) == 1 {
-					// variable
-					if v, ok := vars[m[0]]; ok {
-						out.WriteString(v)
-						continue
-					}
-				}
 				// proceed with special commands
-				if m[0] == "renderlist" {
+				switch {
+				case m[0] == "renderlist": 
 					if res, err := renderlist(vars, m[1:]...); err == nil {
 						out.WriteString(res)
 					} else {
 						fmt.Println(err)
 					}
 					continue
+				case m[0] == "favicon" :
+					if res, err := renderFavicon(vars, m[1:]...); err == nil {
+						out.WriteString(res)
+					} else {
+						fmt.Println(err)
+					}
+					continue
+				case filepath.Ext(m[0]) == ".html" || filepath.Ext(m[0]) == ".md":
+					// proceed partials (.html or md) 
+					if b, err := ioutil.ReadFile(filepath.Join(ZSDIR, m[0])); err == nil {
+						// make it recursive
+						if deep > 10 {
+							return string(b), nil
+						}
+						if res, err := render(string(b), vars, deep+1); err == nil {
+							out.WriteString(res)
+						} else {
+							fmt.Println(err)
+						}
+						continue
+					}
+					fallthrough
+				case len(m) == 1 :
+					// variable
+					if v, ok := vars[m[0]]; ok {
+						out.WriteString(v)
+						continue
+					}
 				}
 
-				// sz pluggins OR partial in hmtl format
+				// sz pluggins 
 				if res, err := run(vars, m[0], m[1:]...); err == nil {
 					out.WriteString(res)
 				} else {
@@ -359,7 +425,7 @@ func buildMarkdown(path string, w io.Writer, vars Vars) error {
 	if err != nil {
 		return err
 	}
-	content, err := render(body, v)
+	content, err := render(body, v, 1)
 	if err != nil {
 		return err
 	}
@@ -372,7 +438,6 @@ func buildMarkdown(path string, w io.Writer, vars Vars) error {
 		defer out.Close()
 		w = out
 	}
-	// TODO: append sitemap
 	appendSitemap(path, v)
 
 	// process layout only if it exists
@@ -394,7 +459,7 @@ func buildHTML(path string, w io.Writer, vars Vars) error {
 	if err != nil {
 		return err
 	}
-	if body, err = render(body, v); err != nil {
+	if body, err = render(body, v, 1); err != nil {
 		return err
 	}
 	tmpl, err := template.New("").Delims("<%", "%>").Parse(body)
@@ -409,7 +474,6 @@ func buildHTML(path string, w io.Writer, vars Vars) error {
 		defer f.Close()
 		w = f
 	}
-	// TODO: append sitemap
 	appendSitemap(path, v)
 
 	return tmpl.Execute(w, vars)
@@ -456,7 +520,7 @@ func buildAll(watch bool) {
 
 	vars := globals()
 	ignorelist := loadIgnore()
-	// TODO: clear sitemap if any
+	// clear sitemap if any
 	os.Remove(filepath.Join(PUBDIR, "sitemap.txt"))
 
 	for {

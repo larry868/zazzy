@@ -112,17 +112,19 @@ $SZ_PUBDIR=docs zazzy build
 
 ## Working with partials (aka. embedded html)
 
-Create your partial file into the `.zazzy` directory. Partials must be `.html` files.
+Create your partial file into the `.zazzy` directory. Partials can be `.html` or `.md` files.
 
 Then insert it's placeholder whenever you want into your other files (could be the layout too). 
 
 For example if you've created the file `.zazzy/footer.html` and you want to use it into the `index.md`, then add the following code into this file:
 
 ```html
-{{ footer }}
+{{ footer.html }}
 ```
 
 It's important not to add any quotes or file extension, only the file name, working as a variable.
+
+The rendering of partials is recursive, that means in our example footer.htlm can include a placholder to embedd another partial.
 
 ## Standard Go Templating syntax 
 
@@ -135,6 +137,10 @@ To avoid conflict with zazzy placeholder symbols `{{` and `}}` then the html tem
 placeholder `{{ renderlist {pattern} }}` run special command to parse itemlayout html for every file in the list correspondinf to the pattern. Usefull to generate a list of blog entries.
 
 Default layout for items is `itemlayout.html` but can be specified in YAML environment variable of the page where the placeholder is found.
+
+## Advanced placeholder `favicon` 
+
+placeholder `{{ favicon {website} }}` run special command to download and generate html to render thefavicon image.
 
 ## sitemap
 
@@ -192,13 +198,12 @@ it's an empty string).
 
 Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https://github.com/zserge/zs/commit/4900afa45db4d9254110f2eabcac6cfd606423b6)
 
-### TODO
+### v0.3
 
-- [x] Feature to generate a sitemap
-- [ ] Feature/pluggin to get and embedd favicon/image of URL
-- [ ] Feature/pluggin to get and embedd favicon/cards of URL
-- [ ] Allow partials within layouts
-- [x] remove amber and gcss features
+- Feature generate a sitemap.txt
+- Feature favicon placeholder, with cache and download of favicon image
+- Feature recursive rendering throu partials
+- remove amber and gcss features
 
 ### V0.2
 

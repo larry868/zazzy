@@ -92,17 +92,33 @@ Hello
 func TestRender(t *testing.T) {
 	vars := map[string]string{"foo": "bar"}
 
-	if s, _ := render("foo bar", vars); s != "foo bar" {
+	if s, _ := render("foo bar", vars, 1); s != "foo bar" {
 		t.Error(s)
 	}
-	if s, _ := render("a {{printf short}} text", vars); s != "a short text" {
+	if s, _ := render("a {{printf short}} text", vars, 1); s != "a short text" {
 		t.Error(s)
 	}
-	if s, _ := render("{{printf Hello}} x{{foo}}z", vars); s != "Hello xbarz" {
+	if s, _ := render("{{printf Hello}} x{{foo}}z", vars, 1); s != "Hello xbarz" {
 		t.Error(s)
 	}
 	// Test error case
-	if _, err := render("a {{greet text ", vars); err == nil {
+	if _, err := render("a {{greet text ", vars, 1); err == nil {
 		t.Error("error expected")
+	}
+}
+
+func TestRenderFavicon(t *testing.T) {
+	vars := map[string]string{"foo": "bar"}
+
+	// 1st time = download and cache
+	if s, _ := render("{{favicon https://lolorenzo777.github.io/website4tests-2/}}", vars, 1); s != "<img src=\"/img/favicons/lolorenzo777-github-iowebsite4tests-2+test-32x32.png\" alt=\"icon\" class=\"favicon\" role=\"img\">" {
+		t.Error(s)
+	} else {
+		// 2nd time = render from cache
+		if s, _ := render("{{favicon https://lolorenzo777.github.io/website4tests-2/}}", vars, 1); s != "<img src=\"/img/favicons/lolorenzo777-github-iowebsite4tests-2+test-32x32.png\" alt=\"icon\" class=\"favicon\" role=\"img\">" {
+			t.Error(s)
+		} else {
+			os.RemoveAll(PUBDIR)
+		}
 	}
 }
