@@ -572,6 +572,127 @@ func buildAll(watch bool) {
 	}
 }
 
+func generateFile(path string, templatetext string, data any) (err error) {
+	tmp, _ := template.New("template").Parse(templatetext)
+	flayout, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer flayout.Close()
+	if err = tmp.Execute(flayout, data); err != nil {
+		fmt.Println(err)
+	}
+	return err
+}
+
+// generateNewWebsite create basic files in the current directory for a new website
+// with a basic layout
+// 
+// Parameters
+//
+// githubpages: 
+// vscode: create build & watch tasks 
+// 
+func generateNewWebsite(title string, hosturl string, vscode bool, githubpages bool, sitemap bool) {
+	hosturl = strings.ToLower(strings.Trim(hosturl, " "))
+	// .zazzy  
+	err := os.Mkdir(".zazzy", 0755)
+	if err != nil && os.IsExist(err) {
+		log.Println(".zazzy directory already exists. init process stops.")
+		return
+	}
+	os.Mkdir("css", 0755)
+	os.Mkdir("img", 0755)
+	os.Mkdir("js", 0755)
+
+	type TWebsite struct {
+		Title string
+		Url string
+		Description string
+		Export string
+		Sitemap string
+	}
+	website := TWebsite{
+		Title: title, 
+		Url: hosturl,
+		Sitemap: "false",
+	}
+	// fulfill the export variable
+	if githubpages {
+		website.Export = "rm -r docs; ZS_PUBDIR=docs "
+	}
+	if sitemap {
+		website.Export += " ZS_SITEMAPTYPE=txt"
+		website.Sitemap = "true"
+	}
+	website.Export += " ZS_HOSTURL=" + hosturl
+	website.Export += " "
+
+	// tasks.json
+	tasksTemplate := `{
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "build",
+				"type": "shell",
+				"command": "{{ .Export }}zazzy build"
+			},
+			{
+				"label": "watch",
+				"type": "shell",
+				"command": "{{ .Export }}zazzy watch"
+			}
+		]
+	}`
+	if vscode {
+		os.Mkdir(".vscode", 0755)
+		generateFile(".vscode/tasks.json", tasksTemplate, website)
+	}
+
+	// index.md
+	indexTemplate := `title: {{ .Title }}
+url: {{ .Url }}
+sitemap: {{ .Sitemap }}
+---
+
+# Home {{ .Title }}
+`
+	generateFile("index.md", indexTemplate, website)
+
+	// layout.html
+	layoutTemplate := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ .Title }}</title>
+    <meta name="title" content="{{ .Title }}">
+    <link rel="canonical" href="{{ .Url }}">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!--page-description-->
+    <meta name="description" content="{{ .Description }}">
+
+    <!--favicon-->
+    <link rel="shortcut icon" href="/favicon.ico">
+</head>
+<body>
+{{"{{content}}"}}
+</body>
+</html>
+`
+	generateFile(".zazzy/layout.html", layoutTemplate, website)
+
+	if githubpages {
+		// .ignore
+		ignoreTemplate := `# files to ignore
+readme.md
+`
+		generateFile(".zazzy/.ignore", ignoreTemplate, website)				
+	}
+	fmt.Println("zazzy website generated")
+}
+
 func init() {
 	// prepend .zazzy to $PATH, so plugins will be found before OS commands
 	p := os.Getenv("PATH")
@@ -599,6 +720,23 @@ func main() {
 		}
 	case "watch":
 		buildAll(true)
+	case "init": {
+		if len(args) <= 2 {
+			fmt.Println("init: website title and host url expected")
+		} else {
+			fvscode := false
+			fgithubpages := false
+			fsitemap := false
+			for _, v := range(args[2:]) {
+				switch strings.ToLower(v) {
+				case "--vscode": fvscode = true
+				case "--githubpages": fgithubpages = true 
+				case "--sitemap": fsitemap = true
+				} 
+			}
+			generateNewWebsite(args[0], args[1], fvscode, fgithubpages, fsitemap) 
+		}
+	}
 	case "var":
 		if len(args) == 0 {
 			fmt.Println("var: filename expected")

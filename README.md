@@ -184,6 +184,8 @@ content generation, or additional commands, like LESS to CSS conversion:
 
 ## Command line usage
 
+`zazzy init <title> <hosturl> [--vscode] [--ghpages] [--sitemap]` create a fresh new website with default files and path
+
 `zazzy build` re-builds your site.
 
 `zazzy build <file>` re-builds one file and prints resulting content to stdout.
@@ -197,6 +199,11 @@ it's an empty string).
 ## Versions
 
 Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https://github.com/zserge/zs/commit/4900afa45db4d9254110f2eabcac6cfd606423b6)
+
+### v0.4
+
+- Feature command 'init' to generate a fresh new site
+
 
 ### v0.3
 

@@ -17,7 +17,10 @@ func TestBuild(t *testing.T) {
 	files, _ := ioutil.ReadDir("testdata")
 	for _, f := range files {
 		if f.IsDir() {
-			testBuild(filepath.Join("testdata", f.Name()), t)
+			dir := f.Name()
+			if dir[0] != '.' {
+				testBuild(filepath.Join("testdata", f.Name()), t)
+			}
 		}
 	}
 }

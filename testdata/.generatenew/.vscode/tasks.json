@@ -1,0 +1,15 @@
+{
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "build",
+				"type": "shell",
+				"command": "rm -r docs; ZS_PUBDIR=docs  ZS_SITEMAPTYPE=txt ZS_HOSTURL=https://website1.test zazzy build"
+			},
+			{
+				"label": "watch",
+				"type": "shell",
+				"command": "rm -r docs; ZS_PUBDIR=docs  ZS_SITEMAPTYPE=txt ZS_HOSTURL=https://website1.test zazzy watch"
+			}
+		]
+	}

@@ -1,4 +1,5 @@
 
-url: "example.com/foo.html"
+foo: bar
+title: Hello, world!
 ---
-Hello
+Some content in markdown
