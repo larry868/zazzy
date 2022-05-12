@@ -261,6 +261,7 @@ func renderlist(vars Vars, args ...string) (string, error){
 		for _, ignoreentry := range ignorelist {
 			g, _ := glob.Compile(ignoreentry)
 			if g.Match(path) {
+				fmt.Printf("renderlist item ignored: %q", path)
 				continue
 			}
 		}
@@ -535,13 +536,14 @@ func buildAll(watch bool) {
 			for _, ignoreentry := range ignorelist {
 				g, _ := glob.Compile(ignoreentry)
 				if g.Match(path) {
+					fmt.Printf("buildAll file ignored: %q", path)
 					return nil
 				}
 			}
 
 			// inform user about fs walk errors, but continue iteration
 			if err != nil {
-				fmt.Println("error:", err)
+				fmt.Println("buildAll error:", err)
 				return nil
 			}
 
@@ -551,7 +553,7 @@ func buildAll(watch bool) {
 			} else if info.ModTime().After(lastModified) {
 				if !modified {
 					// First file in this build cycle is about to be modified
-					run(vars, "prehook")
+					run(vars, "buildAll prehook")
 					modified = true
 				}
 				log.Println("build:", path)
@@ -561,7 +563,7 @@ func buildAll(watch bool) {
 		})
 		if modified {
 			// At least one file in this build cycle has been modified
-			run(vars, "posthook")
+			run(vars, "buildAll posthook")
 			modified = false
 		}
 		if !watch {
