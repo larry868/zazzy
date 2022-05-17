@@ -536,7 +536,6 @@ func buildAll(watch bool) {
 			for _, ignoreentry := range ignorelist {
 				g, _ := glob.Compile(ignoreentry)
 				if g.Match(path) {
-					fmt.Printf("buildAll file ignored: %q", path)
 					return nil
 				}
 			}
