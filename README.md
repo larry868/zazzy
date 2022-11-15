@@ -29,16 +29,20 @@ Zazzy is a simple Static Site Generator, written in Go.
 
 Download the binaries from Github or build it manually:
 
-	$ go get github.com/lolorenzo777/zazzy
+```bash
+go get github.com/lolorenzo777/zazzy
+```
 
 Install it:
 
-	$ go install github.com/lolorenzo777/zazzy
+```bash
+go install github.com/lolorenzo777/zazzy
+```
 
 Then run zazzy in the directory of your website:
 
 ```bash
-$ cd {mywebsite}
+cd {mywebsite}
 export ZS_PUBDIR=docs && zazzy build
 ```
 
@@ -203,7 +207,7 @@ Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https:/
 ### v0.4
 
 - Feature command 'init' to generate a fresh new site
-
+- migrate to go v1.19.3
 
 ### v0.3
 
@@ -220,7 +224,7 @@ Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https:/
 
 - upgraded to go 1.16
 - enhancement to allow processing of markdonw and amber file without layout file
-- ``.zazzy/.ignore `` file allows to list files and directories to be igniorred from the processor
+- ``.zazzy/.ignore`` file allows to list files and directories to be igniorred from the processor
 
 ### Zazzy go module
 
