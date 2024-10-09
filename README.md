@@ -30,13 +30,13 @@ Zazzy is a simple Static Site Generator, written in Go.
 Download the binaries from Github or build it manually:
 
 ```bash
-go get github.com/lolorenzo777/zazzy
+go get github.com/larry868/zazzy
 ```
 
 Install it:
 
 ```bash
-go install github.com/lolorenzo777/zazzy
+go install github.com/larry868/zazzy
 ```
 
 Then run zazzy in the directory of your website:
@@ -204,10 +204,14 @@ it's an empty string).
 
 Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https://github.com/zserge/zs/commit/4900afa45db4d9254110f2eabcac6cfd606423b6)
 
+### v0.5
+- migrate to go v1.23
+- transfer repo to larry868
+
 ### v0.4
 
 - Feature command 'init' to generate a fresh new site
-- migrate to go v1.19.3
+- migrate to go v1.19
 
 ### v0.3
 
@@ -228,9 +232,9 @@ Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https:/
 
 ### Zazzy go module
 
-Zazzy is published and available in the go public package manager https://pkg.go.dev/github.com/lolorenzo777/zazzy
+Zazzy is published and available in the go public package manager https://pkg.go.dev/github.com/larry868/zazzy
 
-`GOPROXY=proxy.golang.org go list -m github.com/lolorenzo777/zazzy@vx.y.z`
+`GOPROXY=proxy.golang.org go list -m github.com/larry868/zazzy@vx.y.z`
 
 ## License
 

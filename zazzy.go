@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,13 +17,13 @@ import (
 	"time"
 
 	"github.com/gobwas/glob"
-	"github.com/lolorenzo777/loadfavicon/getfavicon"
+	"github.com/larry868/loadfavicon/v2"
 	"github.com/russross/blackfriday/v2"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	ZSDIR  = ".zazzy"
+	ZSDIR     = ".zazzy"
 	DFTPUBDIR = ".pub"
 )
 
@@ -71,26 +71,26 @@ func globals() Vars {
 // each entry must be formatted as a glob pattern https://github.com/gobwas/glob
 // return an array of trimed pattern of files to ignore
 func loadIgnore() (lst []string) {
-    f, err := os.Open(filepath.Join(ZSDIR, ".ignore"))
-    if err != nil {
+	f, err := os.Open(filepath.Join(ZSDIR, ".ignore"))
+	if err != nil {
 		// .ignore file is not mandatory
-        return nil
-    }
-    defer f.Close()
+		return nil
+	}
+	defer f.Close()
 
-    // read the file line by line using scanner
-    scanner := bufio.NewScanner(f)
+	// read the file line by line using scanner
+	scanner := bufio.NewScanner(f)
 
-    for scanner.Scan() {
+	for scanner.Scan() {
 		entry := strings.Trim(scanner.Text(), " ")
-		if len(entry)>0 && entry[:1] != "#" {
+		if len(entry) > 0 && entry[:1] != "#" {
 			if _, err := glob.Compile(entry); err != nil {
 				log.Println(err)
 			} else {
 				lst = append(lst, entry)
 			}
 		}
-    }
+	}
 
 	// ensure PUBDIR is always ignored
 	if filepath.Base(PUBDIR)[0] != '.' && !strings.HasPrefix(PUBDIR, ".") {
@@ -103,15 +103,15 @@ func loadIgnore() (lst []string) {
 var gSitemapWarning bool
 
 // appendSitemap generate an entry in the sitemap.txt file
-// according to paramaters: ZS_SITEMAPTXT must be true, and 
+// according to paramaters: ZS_SITEMAPTXT must be true, and
 // the "sitemap: true" is in the YAML file header
-func appendSitemap(path string, vars Vars) {
+func appendSitemap(vars Vars) {
 	if strings.ToLower(vars["sitemaptype"]) != "txt" {
-		return 
+		return
 	}
 
 	if strings.ToLower(vars["sitemap"]) != "true" {
-		return 
+		return
 	}
 
 	if len(vars["hosturl"]) == 0 && !gSitemapWarning {
@@ -121,24 +121,24 @@ func appendSitemap(path string, vars Vars) {
 
 	sitemapentry := filepath.Join(vars["hosturl"], vars["url"])
 
-    file, err := os.OpenFile(filepath.Join(PUBDIR, "sitemap.txt"), os.O_RDWR|os.O_CREATE, 0755)
-    if err != nil {
+	file, err := os.OpenFile(filepath.Join(PUBDIR, "sitemap.txt"), os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
 		log.Println(err)
 		return
-    }
-    defer file.Close()
+	}
+	defer file.Close()
 	scanner := bufio.NewScanner(file)
-    for scanner.Scan() {
+	for scanner.Scan() {
 		// do not add twice the same URL
 		if strings.ToLower(strings.Trim(scanner.Text(), " ")) == sitemapentry {
-			return 
+			return
 		}
-    }
-    if err := scanner.Err(); err != nil {
+	}
+	if err := scanner.Err(); err != nil {
 		log.Println(err)
 		return
-    }
-	if _, err := file.WriteString( sitemapentry +"\n"); err != nil {
+	}
+	if _, err := file.WriteString(sitemapentry + "\n"); err != nil {
 		log.Println(err)
 		return
 	}
@@ -172,38 +172,41 @@ func run(vars Vars, cmd string, args ...string) (string, error) {
 	return outbuf.String(), nil
 }
 
-// getDownloadedFavicon get favicon URL of the downloaded Favicon, and download it 
+// getDownloadedFavicon get favicon URL of the downloaded Favicon, and download it
 // if it doesn't exist on the local directory.
-func getDownloadedFavicon(website string) (url string, err error) {
+func getDownloadedFavicon(website string) (strurl string, err error) {
 
 	vars := globals()
 	faviconCachePath := filepath.Join(PUBDIR, vars["favicondir"])
-	faviconSlugifiedWebsite := getfavicon.SlugHost(website)
+	faviconSlugifiedWebsite := loadfavicon.SlugHost(website)
 
 	// look if favicon(s) has already been downloaded
 	cache, err := filepath.Glob(filepath.Join(faviconCachePath, faviconSlugifiedWebsite) + "+*.*")
-	if len(cache) == 0 && err == nil{
+	if len(cache) == 0 && err == nil {
 		// Connect to the website and download the best favicon
-		favicons, err := getfavicon.Download(website, faviconCachePath, true)
-		if len(favicons) == 0 {
+		client := &http.Client{Timeout: time.Second * 5}
+		faviconfilename, err := loadfavicon.DownloadOne(client, website, faviconCachePath, true)
+		if err != nil {
 			log.Println(err)
 			return "", err
 		}
-		url = filepath.Join("/", vars["favicondir"], favicons[0].DiskFileName)
+		strurl = filepath.Join(faviconCachePath, faviconfilename)
+
 	} else {
-		url = cache[0]
-		if url[:len(PUBDIR)] != PUBDIR {
-			panic("getDownloadedFavicon")
-		}
-		url = url[len(PUBDIR):]
+		strurl = cache[0]
 	}
 
-	return url, err
+	if len(strurl) < len(PUBDIR) || strurl[:len(PUBDIR)] != PUBDIR {
+		panic("getDownloadedFavicon")
+	}
+	strurl = strurl[len(PUBDIR):]
+
+	return strurl, err
 }
 
-// renderFavicon donwload th favicon of a website given in paramaters 
-// and generate html to render thefavicon image. 
-func renderFavicon(vars Vars, args ...string) (string, error){
+// renderFavicon donwload th favicon of a website given in paramaters
+// and generate html to render thefavicon image.
+func renderFavicon(args ...string) (string, error) {
 	if len(args) != 1 {
 		log.Println("favicon placeholder requires a website in parameter. nothing rendered")
 		return "", nil
@@ -211,15 +214,15 @@ func renderFavicon(vars Vars, args ...string) (string, error){
 
 	faviconURL, err := getDownloadedFavicon(args[0])
 	if len(faviconURL) > 0 && err == nil {
-		return "<img src=\"" + faviconURL +"\" alt=\"icon\" class=\"favicon\" role=\"img\">", nil
+		return "<img src=\"" + faviconURL + "\" alt=\"icon\" class=\"favicon\" role=\"img\">", nil
 	}
 	return "", err
 }
 
-// renderlist generate an HTML string for every files in the pattern 
+// renderlist generate an HTML string for every files in the pattern
 // passed in arg[0]. The string if rendered according to the itemlayout.html file.
 // Than all strings are concatenated and ordered accordng to filenames in the pattern
-func renderlist(vars Vars, args ...string) (string, error){
+func renderlist(vars Vars, args ...string) (string, error) {
 	// get the pattern of files to scan and list
 	if len(args) != 1 {
 		log.Println("renderlist placeholder requires pattern in parameter. nothing rendered.")
@@ -256,7 +259,7 @@ func renderlist(vars Vars, args ...string) (string, error){
 		if filepath.Base(path)[0] == '.' || strings.HasPrefix(path, ".") {
 			continue
 		}
-		
+
 		// ignore files and directory listed in the .zazzy/.ignore file
 		for _, ignoreentry := range ignorelist {
 			g, _ := glob.Compile(ignoreentry)
@@ -296,13 +299,12 @@ func renderlist(vars Vars, args ...string) (string, error){
 	return result, nil
 }
 
-
 // getVars returns list of variables defined in a text file and actual file
 // content following the variables declaration. Header is separated from
 // content by an empty line. Header can be either YAML or JSON.
 // If no empty newline is found - file is treated as content-only.
 func getVars(path string, globals Vars) (Vars, string, error) {
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, "", err
 	}
@@ -372,23 +374,23 @@ func render(s string, vars Vars, deep int) (string, error) {
 				m := strings.Fields(cmd)
 				// proceed with special commands
 				switch {
-				case m[0] == "renderlist": 
+				case m[0] == "renderlist":
 					if res, err := renderlist(vars, m[1:]...); err == nil {
 						out.WriteString(res)
 					} else {
 						fmt.Println(err)
 					}
 					continue
-				case m[0] == "favicon" :
-					if res, err := renderFavicon(vars, m[1:]...); err == nil {
+				case m[0] == "favicon":
+					if res, err := renderFavicon(m[1:]...); err == nil {
 						out.WriteString(res)
 					} else {
 						fmt.Println(err)
 					}
 					continue
 				case filepath.Ext(m[0]) == ".html" || filepath.Ext(m[0]) == ".md":
-					// proceed partials (.html or md) 
-					if b, err := ioutil.ReadFile(filepath.Join(ZSDIR, m[0])); err == nil {
+					// proceed partials (.html or md)
+					if b, err := os.ReadFile(filepath.Join(ZSDIR, m[0])); err == nil {
 						// make it recursive
 						if deep > 10 {
 							return string(b), nil
@@ -401,7 +403,7 @@ func render(s string, vars Vars, deep int) (string, error) {
 						continue
 					}
 					fallthrough
-				case len(m) == 1 :
+				case len(m) == 1:
 					// variable
 					if v, ok := vars[m[0]]; ok {
 						out.WriteString(v)
@@ -409,7 +411,7 @@ func render(s string, vars Vars, deep int) (string, error) {
 					}
 				}
 
-				// sz pluggins 
+				// sz pluggins
 				if res, err := run(vars, m[0], m[1:]...); err == nil {
 					out.WriteString(res)
 				} else {
@@ -439,7 +441,7 @@ func buildMarkdown(path string, w io.Writer, vars Vars) error {
 		defer out.Close()
 		w = out
 	}
-	appendSitemap(path, v)
+	appendSitemap(v)
 
 	// process layout only if it exists
 	layoutfile := filepath.Join(ZSDIR, v["layout"])
@@ -475,7 +477,7 @@ func buildHTML(path string, w io.Writer, vars Vars) error {
 		defer f.Close()
 		w = f
 	}
-	appendSitemap(path, v)
+	appendSitemap(v)
 
 	return tmpl.Execute(w, vars)
 }
@@ -531,7 +533,7 @@ func buildAll(watch bool) {
 			if filepath.Base(path)[0] == '.' || strings.HasPrefix(path, ".") {
 				return nil
 			}
-			
+
 			// ignore files and directory listed in the .zazzy/.ignore file
 			for _, ignoreentry := range ignorelist {
 				g, _ := glob.Compile(ignoreentry)
@@ -589,15 +591,14 @@ func generateFile(path string, templatetext string, data any) (err error) {
 
 // generateNewWebsite create basic files in the current directory for a new website
 // with a basic layout
-// 
-// Parameters
 //
-// githubpages: 
-// vscode: create build & watch tasks 
-// 
+// # Parameters
+//
+// githubpages:
+// vscode: create build & watch tasks
 func generateNewWebsite(title string, hosturl string, vscode bool, githubpages bool, sitemap bool) {
 	hosturl = strings.ToLower(strings.Trim(hosturl, " "))
-	// .zazzy  
+	// .zazzy
 	err := os.Mkdir(".zazzy", 0755)
 	if err != nil && os.IsExist(err) {
 		log.Println(".zazzy directory already exists. init process stops.")
@@ -608,15 +609,15 @@ func generateNewWebsite(title string, hosturl string, vscode bool, githubpages b
 	os.Mkdir("js", 0755)
 
 	type TWebsite struct {
-		Title string
-		Url string
+		Title       string
+		Url         string
 		Description string
-		Export string
-		Sitemap string
+		Export      string
+		Sitemap     string
 	}
 	website := TWebsite{
-		Title: title, 
-		Url: hosturl,
+		Title:   title,
+		Url:     hosturl,
 		Sitemap: "false",
 	}
 	// fulfill the export variable
@@ -689,7 +690,7 @@ sitemap: {{ .Sitemap }}
 		ignoreTemplate := `# files to ignore
 readme.md
 `
-		generateFile(".zazzy/.ignore", ignoreTemplate, website)				
+		generateFile(".zazzy/.ignore", ignoreTemplate, website)
 	}
 	fmt.Println("zazzy website generated")
 }
@@ -721,23 +722,27 @@ func main() {
 		}
 	case "watch":
 		buildAll(true)
-	case "init": {
-		if len(args) <= 2 {
-			fmt.Println("init: website title and host url expected")
-		} else {
-			fvscode := false
-			fgithubpages := false
-			fsitemap := false
-			for _, v := range(args[2:]) {
-				switch strings.ToLower(v) {
-				case "--vscode": fvscode = true
-				case "--githubpages": fgithubpages = true 
-				case "--sitemap": fsitemap = true
-				} 
+	case "init":
+		{
+			if len(args) <= 2 {
+				fmt.Println("init: website title and host url expected")
+			} else {
+				fvscode := false
+				fgithubpages := false
+				fsitemap := false
+				for _, v := range args[2:] {
+					switch strings.ToLower(v) {
+					case "--vscode":
+						fvscode = true
+					case "--githubpages":
+						fgithubpages = true
+					case "--sitemap":
+						fsitemap = true
+					}
+				}
+				generateNewWebsite(args[0], args[1], fvscode, fgithubpages, fsitemap)
 			}
-			generateNewWebsite(args[0], args[1], fvscode, fgithubpages, fsitemap) 
 		}
-	}
 	case "var":
 		if len(args) == 0 {
 			fmt.Println("var: filename expected")

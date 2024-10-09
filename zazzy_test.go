@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +24,7 @@ func TestRenameExt(t *testing.T) {
 	}
 }
 
-func TestRun(t *testing.T) {
+func TestRunPlugins(t *testing.T) {
 	// external command
 	if s, err := run(Vars{}, "echo", "hello"); err != nil || s != "hello\n" {
 		t.Error(s, err)
@@ -40,8 +39,8 @@ func TestRun(t *testing.T) {
 	script := `#!/bin/sh
 echo foo
 `
-	ioutil.WriteFile(filepath.Join(ZSDIR, "echo"), []byte(script), 0755)
-	if s, err := run(Vars{}, "echo", "hello"); err != nil || s != "foo\n" {
+	os.WriteFile(filepath.Join(ZSDIR, "echo"), []byte(script), 0755)
+	if s, err := run(Vars{}, "./echo", "hello"); err != nil || s != "foo\n" {
 		t.Error(s, err)
 	}
 	os.Remove(filepath.Join(ZSDIR, "echo"))
@@ -74,7 +73,7 @@ Hello
 	}
 
 	for script, vars := range tests {
-		ioutil.WriteFile("test.md", []byte(script), 0644)
+		os.WriteFile("test.md", []byte(script), 0644)
 		if v, s, err := getVars("test.md", Vars{"baz": "123"}); err != nil {
 			t.Error(err)
 		} else if s != vars["__content"] {
@@ -107,15 +106,15 @@ func TestRender(t *testing.T) {
 	}
 }
 
-func TestRenderFavicon(t *testing.T) {
-	vars := map[string]string{"foo": "bar"}
+func TestRenderFavicon2(t *testing.T) {
 
 	// 1st time = download and cache
-	if s, _ := render("{{favicon https://lolorenzo777.github.io/website4tests-2/}}", vars, 1); s != "<img src=\"/img/favicons/lolorenzo777-github-iowebsite4tests-2+test-32x32.png\" alt=\"icon\" class=\"favicon\" role=\"img\">" {
+	os.RemoveAll(PUBDIR)
+	if s, _ := render("{{favicon https://laurent.lourenco.pro}}", nil, 1); s != "<img src=\"/img/favicons/laurent-lourenco-pro+180x180+.png\" alt=\"icon\" class=\"favicon\" role=\"img\">" {
 		t.Error(s)
 	} else {
 		// 2nd time = render from cache
-		if s, _ := render("{{favicon https://lolorenzo777.github.io/website4tests-2/}}", vars, 1); s != "<img src=\"/img/favicons/lolorenzo777-github-iowebsite4tests-2+test-32x32.png\" alt=\"icon\" class=\"favicon\" role=\"img\">" {
+		if s, _ := render("{{favicon https://laurent.lourenco.pro/}}", nil, 1); s != "<img src=\"/img/favicons/laurent-lourenco-pro+180x180+.png\" alt=\"icon\" class=\"favicon\" role=\"img\">" {
 			t.Error(s)
 		} else {
 			os.RemoveAll(PUBDIR)
