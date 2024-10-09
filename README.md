@@ -204,9 +204,10 @@ it's an empty string).
 
 Fork of `zs` version commit [`4900afa45db4d9254110f2eabcac6cfd606423b6`](https://github.com/zserge/zs/commit/4900afa45db4d9254110f2eabcac6cfd606423b6)
 
-### v0.5
+### v1.5.1
 - migrate to go v1.23
 - transfer repo to larry868
+- memo: mistake in version numbering can't be reverting in th go package list. So jump from v0.4 to v1.5
 
 ### v0.4
 
